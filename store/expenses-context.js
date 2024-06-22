@@ -82,18 +82,18 @@ export const ExpensesContext = createContext({
   updateExpense: (id, { description, amount, date }) => {}, //the same id before and after updating.
 });
 
-function expensesReducer(state, action) {
+function expensesReducer(state, action) { //state is an array of expenses
   switch (action.type) {
     case "ADD":
       const id = new Date().toString() + Math.random().toString(); //Generates a unique ID for a new expense by combining the current date string with a random number string
-      return [{ ...action.payload, id }, ...state];
+      return [{ ...action.payload, id }, ...state]; //action.payload contains the new expense data that is being added (like description, amount, and date).
 
     case "UPDATE":
       const updatableExpenseIndex = state.findIndex(
-        (expense) => expense.id === action.payload.id
+        (expense) => expense.id === action.payload.id //for example index = 2
       );
-      const updatableExpenses = state[updatableExpenseIndex];
-      const updatedItem = { ...updatableExpenses, ...action.payload.data };
+      const updatableExpenses = state[updatableExpenseIndex]; //updatableExpenses stores the data of expense that needs to be updated
+      const updatedItem = { ...updatableExpenses, ...action.payload.data }; //This line creates a new expense object (updatedItem) by combining the existing expense (updatableExpenses) with the updated data (action.payload.data).
       const updatedExpenses = [...state];
       updatedExpenses[updatableExpenseIndex] = updatedItem;
       return updatedExpenses;

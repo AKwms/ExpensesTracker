@@ -1,12 +1,14 @@
-import { useContext, useLayoutEffect } from "react";
+import { useContext, useLayoutEffect, useState } from "react";
 import { View, StyleSheet, TextInput } from "react-native";
 import IconButton from "../components/UI/IconButton";
 import { GlobalStyles } from "../constants/styles";
-import Button from "../components/UI/Button";
+import { storeExpense, updateExpense, deleteExpense } from '../util/http';
 import { ExpensesContext } from "../store/expenses-context";
 import ExpenseForm from "../components/ManageExpense/ExpenseForm";
+import LoadingOverlay from "../components/UI/LoadingOverlay";
 
 function ManageExpense({ route, navigation }) {
+  const [isSubmitting, setisSubmitting] = useState(false); //initially we are not submitting anything
   const expenseCtx = useContext(ExpensesContext);
 
   //the route prop is passed by the navigation component in ExpenseItem.js
@@ -24,25 +26,33 @@ function ManageExpense({ route, navigation }) {
     });
   }, [navigation, isEditing]);
 
-  function deleteExpenseHandler() {
+  async function deleteExpenseHandler() {
+    setisSubmitting(true);
+    await deleteExpense(editedExpenseId); //i used await here to be updated in the screen immediately
     expenseCtx.deleteExpense(editedExpenseId);
-    navigation.goBack();
+    navigation.goBack(); //no need to set the isSubmitting to false bc we are navigating away from the screen
   }
 
   function cancelHandler() {
     navigation.goBack();
   }
 
-  function confirmHandler(expenseData) {
+  async function confirmHandler(expenseData) {
+    setisSubmitting(true);
     if (isEditing) {
       expenseCtx.updateExpense(editedExpenseId, expenseData);
+      updateExpense(editedExpenseId, expenseData); //no need to await bc we don't need the response
     } else {
-      expenseCtx.addExpense(expenseData);
+      const id = await storeExpense(expenseData); //function from util/http.js
+      expenseCtx.addExpense({...expenseData, id: id}); //function from store/expenses-context.js
     }
 
     navigation.goBack();
   }
 
+  if (isSubmitting) {
+    return <LoadingOverlay />;
+  }
   return (
     <View style={styles.container}>
       <ExpenseForm

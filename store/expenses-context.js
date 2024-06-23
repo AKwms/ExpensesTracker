@@ -1,83 +1,10 @@
 import { createContext, useReducer } from "react";
 
-const DUMMY_EXPENSES = [
-  {
-    id: "e1",
-    description: "A pair of shoes",
-    amount: 59.99,
-    date: new Date("2024-6-21"),
-  },
-  {
-    id: "e2",
-    description: "A pair of trousers",
-    amount: 89.29,
-    date: new Date("2024-01-05"),
-  },
-  {
-    id: "e3",
-    description: "Some bananas",
-    amount: 5.99,
-    date: new Date("2023-12-01"),
-  },
-  {
-    id: "e4",
-    description: "A book",
-    amount: 14.99,
-    date: new Date("2024-02-19"),
-  },
-  {
-    id: "e5",
-    description: "Another book",
-    amount: 18.59,
-    date: new Date("2024-06-18"),
-  },
-  {
-    id: "e6",
-    description: "A smartwatch",
-    amount: 199.99,
-    date: new Date("2024-06-15"),
-  },
-  {
-    id: "e7",
-    description: "A coffee mug",
-    amount: 8.99,
-    date: new Date("2024-06-05"),
-  },
-  {
-    id: "e8",
-    description: "Wireless headphones",
-    amount: 59.99,
-    date: new Date("2024-06-15"),
-  },
-  {
-    id: "e9",
-    description: "USB flash drive",
-    amount: 16.49,
-    date: new Date("2024-04-22"),
-  },
-  {
-    id: "e10",
-    description: "Desk lamp",
-    amount: 22.99,
-    date: new Date("2024-05-18"),
-  },
-  {
-    id: "e11",
-    description: "Notebook",
-    amount: 3.49,
-    date: new Date("20224-06-01"),
-  },
-  {
-    id: "e12",
-    description: "Water bottle",
-    amount: 11.99,
-    date: new Date("2023-07-03"),
-  },
-];
 
 export const ExpensesContext = createContext({
   expenses: [],
   addExpense: ({ description, amount, date }) => {},
+  setExpenses: (expenses) => {},
   deleteExpense: (id) => {},
   updateExpense: (id, { description, amount, date }) => {}, //the same id before and after updating.
 });
@@ -85,8 +12,13 @@ export const ExpensesContext = createContext({
 function expensesReducer(state, action) { //state is an array of expenses
   switch (action.type) {
     case "ADD":
-      const id = new Date().toString() + Math.random().toString(); //Generates a unique ID for a new expense by combining the current date string with a random number string
-      return [{ ...action.payload, id }, ...state]; //action.payload contains the new expense data that is being added (like description, amount, and date).
+      //no need to generate the id bc the firebase will generate it for us
+      // const id = new Date().toString() + Math.random().toString(); //Generates a unique ID for a new expense by combining the current date string with a random number string
+      return [action.payload, ...state]; //action.payload contains the new expense data that is being added (like description, amount, and date).
+
+    case "SET":
+      const inverted = action.payload.reverse(); //reverse the order of the expenses bc in firebase the newest expense is at the end of the array
+      return inverted;
 
     case "UPDATE":
       const updatableExpenseIndex = state.findIndex(
@@ -107,10 +39,14 @@ function expensesReducer(state, action) { //state is an array of expenses
 }
 
 function ExpensesContextProvider({ children }) {
-  const [expensesState, dispatch] = useReducer(expensesReducer, DUMMY_EXPENSES);
+  const [expensesState, dispatch] = useReducer(expensesReducer, []);
 
   function addExpense(expenseData) {
     dispatch({ type: "ADD", payload: expenseData });
+  }
+
+  function setExpenses(expenses) {
+    dispatch({ type: "SET", payload: expenses });
   }
 
   function deleteExpense(id) {
@@ -123,6 +59,7 @@ function ExpensesContextProvider({ children }) {
 
   const value = {
     expenses: expensesState,
+    setExpenses: setExpenses,
     addExpense: addExpense,
     deleteExpense: deleteExpense,
     updateExpense: updateExpense,

@@ -1,20 +1,42 @@
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import ExpensesOutput from "../components/ExpensesOutput/ExpensesOutput";
 import { ExpensesContext } from "../store/expenses-context";
 import { getDateMinusDays } from "../util/data";
-
+import { fetchExpenses } from "../util/http";
+import LoadingOverlay from "../components/UI/LoadingOverlay";
 
 function RecentExpenses() {
-    const expensesCtx = useContext(ExpensesContext);
+  const [isFetching, setisFetching] = useState(true); //initially true bc we know that the app is loading at the beginning
+  const expensesCtx = useContext(ExpensesContext);
 
-    const recentExpenses = expensesCtx.expenses.filter((expense) => {
-        const today = new Date();
-        const date7DaysAgo = getDateMinusDays(today, 7);
-       
-        return (expense.date >= date7DaysAgo) && (expense.date <= today);
-    });
+  
+  useEffect(() => {
+    async function getExpenses() {
+      setisFetching(true);
+      const expenses = await fetchExpenses(); //get the expenses from the server
+      setisFetching(false);
+      expensesCtx.setExpenses(expenses); //update the expenses in the context to be displayes immediately on the app !
+    }
+    getExpenses();
+  }, []);
+  
+  if (isFetching) {
+    return <LoadingOverlay />;
+  }
 
-    return <ExpensesOutput expenses={recentExpenses} expensesPeriod="Last 7 days" fallbackText='No Expenses for the last 7 days !'/>;
+  const recentExpenses = expensesCtx.expenses.filter((expense) => {
+    const today = new Date();
+    const date7DaysAgo = getDateMinusDays(today, 7);
+
+    return expense.date >= date7DaysAgo && expense.date <= today;
+  });
+  return (
+    <ExpensesOutput
+      expenses={recentExpenses}
+      expensesPeriod="Last 7 days"
+      fallbackText="No Expenses for the last 7 days !"
+    />
+  );
 }
 
 export default RecentExpenses;

@@ -2,13 +2,15 @@ import { useContext, useLayoutEffect, useState } from "react";
 import { View, StyleSheet, TextInput } from "react-native";
 import IconButton from "../components/UI/IconButton";
 import { GlobalStyles } from "../constants/styles";
-import { storeExpense, updateExpense, deleteExpense } from '../util/http';
+import { storeExpense, updateExpense, deleteExpense } from "../util/http";
 import { ExpensesContext } from "../store/expenses-context";
 import ExpenseForm from "../components/ManageExpense/ExpenseForm";
 import LoadingOverlay from "../components/UI/LoadingOverlay";
+import ErrorOverlay from "../components/UI/ErrorOverlay";
 
 function ManageExpense({ route, navigation }) {
   const [isSubmitting, setisSubmitting] = useState(false); //initially we are not submitting anything
+  const [error, setError] = useState(); //initially we don't have any error
   const expenseCtx = useContext(ExpensesContext);
 
   //the route prop is passed by the navigation component in ExpenseItem.js
@@ -16,8 +18,9 @@ function ManageExpense({ route, navigation }) {
   const isEditing = !!editedExpenseId; //i used the !! operator to convert the editExpenseId to a boolean value.
   //the title will be dependent on whether the user is editing an expense or adding a new one.
 
-  const selectedExpense = expenseCtx.expenses.find(expense => expense.id === editedExpenseId); //true or false
-
+  const selectedExpense = expenseCtx.expenses.find(
+    (expense) => expense.id === editedExpenseId
+  ); //true or false
 
   useLayoutEffect(() => {
     //useLayoutEffect is used to update the title of the screen dynamically
@@ -28,9 +31,15 @@ function ManageExpense({ route, navigation }) {
 
   async function deleteExpenseHandler() {
     setisSubmitting(true);
-    await deleteExpense(editedExpenseId); //i used await here to be updated in the screen immediately
-    expenseCtx.deleteExpense(editedExpenseId);
-    navigation.goBack(); //no need to set the isSubmitting to false bc we are navigating away from the screen
+    try {
+      await deleteExpense(editedExpenseId); //i used await here to be updated in the screen immediately
+      //these two lines can't be executed if the above line throws an error
+      expenseCtx.deleteExpense(editedExpenseId);
+      navigation.goBack(); //no need to set the isSubmitting to false bc we are navigating away from the screen
+    } catch (error) {
+      setError("An error occurred while deleting the expense!");
+      setisSubmitting(false);
+    }
   }
 
   function cancelHandler() {
@@ -39,20 +48,29 @@ function ManageExpense({ route, navigation }) {
 
   async function confirmHandler(expenseData) {
     setisSubmitting(true);
-    if (isEditing) {
-      expenseCtx.updateExpense(editedExpenseId, expenseData);
-      updateExpense(editedExpenseId, expenseData); //no need to await bc we don't need the response
-    } else {
-      const id = await storeExpense(expenseData); //function from util/http.js
-      expenseCtx.addExpense({...expenseData, id: id}); //function from store/expenses-context.js
+    try {
+      if (isEditing) {
+        expenseCtx.updateExpense(editedExpenseId, expenseData);
+        updateExpense(editedExpenseId, expenseData); //no need to await bc we don't need the response
+      } else {
+        const id = await storeExpense(expenseData); //function from util/http.js
+        expenseCtx.addExpense({ ...expenseData, id: id }); //function from store/expenses-context.js
+      }
+      navigation.goBack();
+    } catch (error) {
+      setError("An error occurred while saving the expense!");
+      setisSubmitting(false);
     }
+  }
 
-    navigation.goBack();
+  if (error && !isSubmitting) {
+    return <ErrorOverlay message={error} onConfirm={() => setError(null)} />;
   }
 
   if (isSubmitting) {
     return <LoadingOverlay />;
   }
+
   return (
     <View style={styles.container}>
       <ExpenseForm
